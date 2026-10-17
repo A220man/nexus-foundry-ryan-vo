@@ -1,8 +1,12 @@
-/** Composition form for create/edit. */
-import { useState, useEffect } from 'react';
+/** Composition form for create/edit with Monaco editor and live preview. */
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { compositionsApi, ApiError } from '../api/client';
+import { buildPreviewDocument } from '../utils/compositionPreview';
 import type { CompositionCreate, CompositionUpdate, ValidationResponse } from '../types/api';
+
+// Lazy-load Monaco so the bundle stays small for tests and initial render.
+import { Editor } from '@monaco-editor/react';
 
 export function CompositionForm() {
   const { id } = useParams<{ id: string }>();
@@ -84,6 +88,15 @@ export function CompositionForm() {
     setValidation(null);
   };
 
+  // Live preview document — recomputed when editor content changes
+  const previewDoc = useMemo(() => {
+    return buildPreviewDocument(
+      formData.html_content || '',
+      formData.css_content,
+      formData.js_content,
+    );
+  }, [formData.html_content, formData.css_content, formData.js_content]);
+
   const handleValidate = async () => {
     const html = formData.html_content || '';
     if (!html.trim()) {
@@ -129,6 +142,24 @@ export function CompositionForm() {
     }
   };
 
+  // Monaco editor options
+  const editorOptions = {
+    minimap: { enabled: false },
+    fontSize: 13,
+    lineHeight: 1.5,
+    tabSize: 2,
+    wordWrap: 'on' as const,
+    automaticLayout: true,
+    scrollBeyondLastLine: false,
+  };
+
+  const editorLanguage: Record<string, string> = { html: 'html', css: 'css', js: 'javascript' };
+  const editorPlaceholder: Record<string, string> = {
+    html: 'Composition HTML (required)...',
+    css: 'Optional styles...',
+    js: 'Optional JavaScript (GSAP timeline)...',
+  };
+
   if (loading) {
     return (
       <div className="loading">
@@ -138,32 +169,36 @@ export function CompositionForm() {
   }
 
   return (
-    <div style={{ maxWidth: 1000, margin: '0 auto' }}>
-      <div className="page-header">
-        <div>
-          <h2>{isEditing ? 'Edit Composition' : 'New Composition'}</h2>
-          <p>{isEditing ? 'Update your video composition' : 'Create a new video composition from HTML'}</p>
-        </div>
-        <div className="page-actions">
-          <Link to={isEditing ? `/compositions/${id}` : '/'} className="btn btn-secondary">
-            Cancel
-          </Link>
-          <button type="submit" form="composition-form" className="btn btn-primary" disabled={saving}>
-            {saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Composition'}
-          </button>
-        </div>
-      </div>
-
-      {error && (
-        <div className="card" style={{ marginBottom: 'var(--spacing-md)', borderColor: 'var(--color-error)' }}>
-          <div className="card-body" style={{ color: 'var(--color-error)' }}>
-            {error}
+    <div className="composition-form-page">
+      <form id="composition-form" onSubmit={handleSubmit}>
+        <div className="page-header">
+          <div>
+            <h2>{isEditing ? 'Edit Composition' : 'New Composition'}</h2>
+            <p>{isEditing ? 'Update your video composition' : 'Create a new video composition from HTML'}</p>
+          </div>
+          <div className="page-actions">
+            <Link to={isEditing ? `/compositions/${id}` : '/'} className="btn btn-secondary">
+              Cancel
+            </Link>
+            <button type="submit" form="composition-form" className="btn btn-primary" disabled={saving}>
+              {saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Composition'}
+            </button>
           </div>
         </div>
-      )}
 
-      <form id="composition-form" onSubmit={handleSubmit}>
+        {error && (
+          <div className="card" style={{ marginBottom: 'var(--spacing-md)', borderColor: 'var(--color-error)' }}>
+            <div className="card-body" style={{ color: 'var(--color-error)' }}>
+              {error}
+            </div>
+          </div>
+        )}
+
+        {/* Metadata fields */}
         <div className="card" style={{ marginBottom: 'var(--spacing-md)' }}>
+          <div className="card-header">
+            <h3>Composition Settings</h3>
+          </div>
           <div className="card-body">
             <div className="form-group">
               <label className="form-label" htmlFor="name">Name *</label>
@@ -182,7 +217,7 @@ export function CompositionForm() {
               <label className="form-label" htmlFor="description">Description</label>
               <textarea
                 id="description"
-                className="form-input"
+                className="form-textarea"
                 value={formData.description}
                 onChange={(e) => handleChange('description', e.target.value)}
                 placeholder="Optional description"
@@ -244,69 +279,78 @@ export function CompositionForm() {
           </div>
         </div>
 
-        <div className="card" style={{ marginBottom: 'var(--spacing-md)' }}>
-          <div className="tabs" role="tablist">
-            <button
-              role="tab"
-              className={`tab ${activeTab === 'html' ? 'active' : ''}`}
-              onClick={() => setActiveTab('html')}
-              aria-selected={activeTab === 'html'}
-            >
-              HTML
-            </button>
-            <button
-              role="tab"
-              className={`tab ${activeTab === 'css' ? 'active' : ''}`}
-              onClick={() => setActiveTab('css')}
-              aria-selected={activeTab === 'css'}
-            >
-              CSS
-            </button>
-            <button
-              role="tab"
-              className={`tab ${activeTab === 'js' ? 'active' : ''}`}
-              onClick={() => setActiveTab('js')}
-              aria-selected={activeTab === 'js'}
-            >
-              JavaScript
-            </button>
-          </div>
+        {/* Editor + Live Preview split view */}
+        <div className="editor-preview-container">
+          <div className="editor-panel">
+            <div className="tabs" role="tablist">
+              <button
+                role="tab"
+                className={`tab ${activeTab === 'html' ? 'active' : ''}`}
+                onClick={() => setActiveTab('html')}
+                aria-selected={activeTab === 'html'}
+              >
+                HTML
+              </button>
+              <button
+                role="tab"
+                className={`tab ${activeTab === 'css' ? 'active' : ''}`}
+                onClick={() => setActiveTab('css')}
+                aria-selected={activeTab === 'css'}
+              >
+                CSS
+              </button>
+              <button
+                role="tab"
+                className={`tab ${activeTab === 'js' ? 'active' : ''}`}
+                onClick={() => setActiveTab('js')}
+                aria-selected={activeTab === 'js'}
+              >
+                JavaScript
+              </button>
+            </div>
 
-          <div className="card-body">
-            <div className="form-group">
-              <textarea
-                className="form-textarea"
+            <div className="editor-body">
+              <Editor
+                height="400px"
+                language={editorLanguage[activeTab]}
                 value={
                   activeTab === 'html' ? formData.html_content :
                   activeTab === 'css' ? formData.css_content :
                   formData.js_content
                 }
-                onChange={(e) => handleChange(
+                options={{ ...editorOptions, placeholder: editorPlaceholder[activeTab] }}
+                onChange={(value) => handleChange(
                   activeTab === 'html' ? 'html_content' :
                   activeTab === 'css' ? 'css_content' :
                   'js_content',
-                  e.target.value
+                  value || '',
                 )}
-                placeholder={
-                  activeTab === 'html' ? 'Composition HTML (required)...' :
-                  activeTab === 'css' ? 'Optional styles...' :
-                  'Optional JavaScript...'
-                }
-                spellCheck={false}
               />
-            </div>
 
-            {activeTab === 'html' && (
-              <div style={{ display: 'flex', gap: 'var(--spacing-sm)', marginTop: 'var(--spacing-sm)' }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={handleValidate}
-                >
-                  Validate HTML
-                </button>
-              </div>
-            )}
+              {activeTab === 'html' && (
+                <div style={{ display: 'flex', gap: 'var(--spacing-sm)', marginTop: 'var(--spacing-sm)' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={handleValidate}
+                  >
+                    Validate HTML
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="preview-panel">
+            <div className="preview-header">
+              <span className="preview-label">Live Preview</span>
+            </div>
+            <iframe
+              title="Composition Live Preview"
+              className="live-preview"
+              srcDoc={previewDoc}
+              sandbox="allow-scripts allow-same-origin"
+            />
           </div>
         </div>
 
@@ -336,6 +380,7 @@ export function CompositionForm() {
           </div>
         )}
 
+        {/* Required HTML Structure reference */}
         <div className="card">
           <div className="card-header">
             <h3>Required HTML Structure</h3>

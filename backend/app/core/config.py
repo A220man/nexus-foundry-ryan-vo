@@ -16,7 +16,7 @@ class Settings(BaseSettings):
 
     # App
     app_name: str = "Nexus Foundry"
-    app_version: str = "1.0.0"
+    app_version: str = "1.1.0"
     debug: bool = False
 
     # Database

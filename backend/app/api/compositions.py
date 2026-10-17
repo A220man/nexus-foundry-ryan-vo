@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -315,7 +315,7 @@ async def delete_composition(
 
 # Validation endpoint
 @router.post("/validate", response_model=ValidationResponse)
-async def validate_composition(html_content: str) -> ValidationResponse:
+async def validate_composition(html_content: Annotated[str, Body(embed=True)]) -> ValidationResponse:
     """Validate composition HTML without saving."""
     result = validate_composition_html(html_content)
     return ValidationResponse(

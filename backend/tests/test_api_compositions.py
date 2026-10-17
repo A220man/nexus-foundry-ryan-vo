@@ -156,14 +156,22 @@ class TestCompositionValidation:
             "/api/compositions/validate",
             json={"html_content": sample_composition_data["html_content"]},
         )
-        # The endpoint expects raw string, not JSON object - let me check the route
-        # Actually the route expects a string body, let me fix the test
-        pass
+        assert response.status_code == 200
+        data = response.json()
+        assert data["valid"] is True
+        assert data["errors"] == []
 
     async def test_validate_invalid_composition(self, client: AsyncClient, invalid_composition_html: str):
-        """Test validating invalid composition HTML."""
-        # The endpoint expects the HTML as raw body
-        pass
+        """Test validating invalid composition HTML returns errors."""
+        response = await client.post(
+            "/api/compositions/validate",
+            json={"html_content": invalid_composition_html},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["valid"] is False
+        assert len(data["errors"]) > 0
+        assert any("data-composition-id" in e for e in data["errors"])
 
 
 class TestRenderJobs:

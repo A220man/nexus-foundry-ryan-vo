@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.0 — work-in-progress checkpoint
+
+Partial code published for continued development. Known issues: STATUS.md.
+
 ## 1.0.0 — work-in-progress checkpoint
 
 Partial code published for continued development. Known issues: STATUS.md.
@@ -36,16 +40,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Validation: Required attributes (data-composition-id, data-start, data-duration, data-width, data-height, data-fps), GSAP timeline checks, video element attributes
 - Rendering: Designed for headless Chrome CDP + ffmpeg (implementation in next phase)
 
+
 ## [Unreleased]
 
-### Planned
-- Headless Chrome rendering service with CDP frame capture
-- ffmpeg encoding pipeline (MP4, WebM, MOV/ProRes, PNG sequence)
-- Render job queue with worker processes
-- Webhook/callback on render completion
-- Monaco editor integration for composition editing
-- Live iframe preview
-- Authentication with Keycloak OIDC + SAML broker
-- LLM-assisted composition generation (opt-in)
-- Deterministic rendering fixes (startResolver, async timeline registration)
-- Desktop packaging with Tauri
+### Added
+- Monaco editor with syntax highlighting for HTML, CSS, and JavaScript in composition editor
+- Live iframe preview showing real-time rendering of composition with GSAP from CDN
+- `frontend/src/utils/compositionPreview.ts` — preview document builder utility
+- `pyproject.toml` at project root for Python project metadata
+- `compose.yaml` (Docker Compose) replacing `docker-compose.yml`
+
+### Changed
+- `frontend/src/components/CompositionForm.tsx` — replaced textarea inputs with Monaco `<Editor>` components in a split-view layout with live preview pane
+- Expanded test suite to 45 backend tests and 25 frontend tests
+
+### Tests
+- `frontend/src/utils/compositionPreview.test.ts` — 7 tests covering preview document generation
