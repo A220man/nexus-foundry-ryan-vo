@@ -4,7 +4,7 @@ Each round completes one feature or repair. Future items are planned, not implem
 
 ## Current round
 
-html-composition-editor
+video-rendering
 
 ## Roadmap
 
@@ -19,13 +19,13 @@ Acceptance:
 - Backend and frontend tests pass
 - Dockerfiles build successfully
 
-Implementation: `backend/app/main.py`, `backend/app/api/compositions.py`, `backend/app/models/composition.py`, `backend/app/core/config.py`, `backend/app/core/database.py`, `backend/app/services/validation.py`, `frontend/src/main.tsx`, `frontend/src/App.tsx`, `frontend/src/api/client.ts`, `frontend/src/components/CompositionList.tsx`, `frontend/src/components/CompositionForm.tsx`, `frontend/src/components/CompositionDetail.tsx`, `frontend/src/components/TemplatesPage.tsx`, `backend/Dockerfile`, `frontend/Dockerfile`, `docker-compose.yml`
+Implementation: `backend/app/main.py`, `backend/app/api/compositions.py`, `backend/app/models/composition.py`, `backend/app/core/config.py`, `backend/app/core/database.py`, `backend/app/services/validation.py`, `frontend/src/main.tsx`, `frontend/src/App.tsx`, `frontend/src/api/client.ts`, `frontend/src/components/CompositionList.tsx`, `frontend/src/components/CompositionForm.tsx`, `frontend/src/components/CompositionDetail.tsx`, `frontend/src/components/TemplatesPage.tsx`, `backend/Dockerfile`, `frontend/Dockerfile`, `compose.yaml`, `pyproject.toml`
 
 Tests: `backend/tests/test_api_compositions.py`, `backend/tests/test_validation.py`, `frontend/src/api/client.test.ts`, `frontend/src/components/CompositionList.test.tsx`
 
 ### html-composition-editor — HTML composition editor with live preview
 
-Status: in_progress
+Status: done
 
 Acceptance:
 - Monaco editor for HTML/JS/CSS editing
@@ -33,7 +33,9 @@ Acceptance:
 - Save composition to backend
 - Composition validation (required data-attributes)
 
-Implementation: `frontend/src/components/CompositionForm.tsx`
+Implementation: `frontend/src/components/CompositionForm.tsx`, `frontend/src/utils/compositionPreview.ts`
+
+Tests: `frontend/src/utils/compositionPreview.test.ts`
 
 ### video-rendering — Video rendering pipeline (headless Chrome + ffmpeg)
 
