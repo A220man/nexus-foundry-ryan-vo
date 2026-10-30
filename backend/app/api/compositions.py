@@ -2,16 +2,19 @@
 from datetime import datetime, timezone
 from typing import Annotated
 from uuid import uuid4
+import asyncio
+from pathlib import Path
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status, BackgroundTasks
 from pydantic import BaseModel, Field
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session, create_tables
+from app.core.config import get_settings
 from app.models.composition import Composition, RenderJob, CompositionTemplate
 from app.services.validation import validate_composition_html, validate_render_config
-
+from app.services.rendering import render_composition, RenderingError
 router = APIRouter(prefix="/api/compositions", tags=["compositions"])
 
 
@@ -335,8 +338,9 @@ async def create_render_job(
     composition_id: str,
     render_config: RenderJobCreate,
     session: SessionDep,
+    background_tasks: BackgroundTasks,
 ) -> RenderJob:
-    """Create a render job for a composition."""
+    """Create a render job for a composition and start rendering in background."""
     # Verify composition exists
     result = await session.execute(
         select(Composition).where(Composition.id == composition_id)
@@ -363,7 +367,52 @@ async def create_render_job(
     session.add(render_job)
     await session.flush()
     await session.refresh(render_job)
+
+    # Start rendering in background
+    settings = get_settings()
+    output_dir = settings.renders_path
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    async def render_task():
+        # Create a new session for the background task
+        from app.core.database import get_session_factory
+        async with get_session_factory()() as bg_session:
+            try:
+                # Re-fetch the render job and composition in the new session
+                result = await bg_session.execute(
+                    select(RenderJob).where(RenderJob.id == render_job.id)
+                )
+                bg_render_job = result.scalar_one_or_none()
+                result = await bg_session.execute(
+                    select(Composition).where(Composition.id == composition_id)
+                )
+                bg_composition = result.scalar_one_or_none()
+
+                if bg_render_job and bg_composition:
+                    output_file = await render_composition(bg_session, bg_render_job, bg_composition, output_dir)
+                    bg_render_job.status = "completed"
+                    bg_render_job.output_path = str(output_file)
+                    bg_render_job.completed_at = await _utc_now()
+                    await bg_session.commit()
+            except Exception as e:
+                # Re-fetch render job in case session was rolled back
+                result = await bg_session.execute(
+                    select(RenderJob).where(RenderJob.id == render_job.id)
+                )
+                bg_render_job = result.scalar_one_or_none()
+                if bg_render_job:
+                    bg_render_job.status = "failed"
+                    bg_render_job.error_message = str(e)
+                    bg_render_job.completed_at = await _utc_now()
+                    await bg_session.commit()
+
+    background_tasks.add_task(render_task)
     return render_job
+
+
+async def _utc_now():
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc)
 
 
 @router.get("/{composition_id}/renders", response_model=list[RenderJobResponse])
