@@ -66,7 +66,6 @@ async def get_session() -> AsyncSession:
             await session.rollback()
             raise
 
-
 async def create_tables() -> None:
     """Create all tables."""
     if _engine is None:
@@ -74,3 +73,11 @@ async def create_tables() -> None:
     assert _engine is not None
     async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+
+def get_session_factory() -> async_sessionmaker[AsyncSession]:
+    """Get session factory for background tasks."""
+    if _session_factory is None:
+        init_db()
+    assert _session_factory is not None
+    return _session_factory
