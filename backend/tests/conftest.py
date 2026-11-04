@@ -8,13 +8,14 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-from app.core.database import Base, get_session
+from app.core.database import Base, get_session, set_session_factory
 from app.main import create_app
 from app.models.composition import Composition, RenderJob, CompositionTemplate
 
 
 # Use in-memory SQLite for tests
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
 
 pytestmark = pytest.mark.asyncio
 
@@ -48,6 +49,8 @@ async def test_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
     async_session = async_sessionmaker(
         test_engine, class_=AsyncSession, expire_on_commit=False
     )
+    # Override the session factory for background tasks
+    set_session_factory(async_session)
     async with async_session() as session:
         yield session
 
@@ -75,23 +78,13 @@ def sample_composition_data() -> dict:
     return {
         "name": "Test Composition",
         "description": "A test composition",
-        "html_content": """
-<div id="root" data-composition-id="main" data-start="0" data-duration="10"
-     data-width="1920" data-height="1080" data-fps="30">
-  <div class="box" style="width: 100px; height: 100px; background: red;"></div>
-</div>
-<script>
-  const tl = gsap.timeline({ paused: true });
-  tl.to(".box", { x: 200, duration: 10 }, 0);
-  window.__timelines = { main: tl };
-</script>
-""",
-        "css_content": ".box { position: absolute; top: 50%; left: 50%; }",
-        "js_content": None,
+        "html_content": '<div id="root" data-composition-id="root" data-start="0" data-duration="5" data-width="1920" data-height="1080" data-fps="30"><div class="box" data-animate="opacity: 0 1 0 5">Hello</div></div>',
+        "css_content": ".box { width: 100px; height: 100px; background: red; }",
+        "js_content": "function registerTimelines() { gsap.timeline({paused: true}).to('.box', {opacity: 1, duration: 5}); }",
         "width": 1920,
         "height": 1080,
         "fps": 30,
-        "duration": 10.0,
+        "duration": 5.0,
         "meta": {},
     }
 
@@ -99,41 +92,22 @@ def sample_composition_data() -> dict:
 @pytest.fixture
 def invalid_composition_html() -> str:
     """Invalid composition HTML (missing required attributes)."""
-    return """
-<div id="root">
-  <div class="box"></div>
-</div>
-"""
+    return '<div id="root"><div class="box">Hello</div></div>'
 
 
 @pytest.fixture
 def sample_template_data() -> dict:
     """Sample template data for testing."""
     return {
-        "name": "Lower Third",
-        "description": "Simple lower third template",
-        "category": "titles",
-        "html_template": """
-<div data-composition-id="lower-third" data-start="0" data-duration="5"
-     data-width="1920" data-height="1080" data-fps="30">
-  <div class="lower-third">
-    <span class="name">{{name}}</span>
-    <span class="title">{{title}}</span>
-  </div>
-</div>
-""",
-        "css_template": ".lower-third { position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); }",
-        "js_template": "const tl = gsap.timeline({ paused: true }); tl.from('.lower-third', { y: 100, opacity: 0, duration: 0.5 }); window.__timelines = { 'lower-third': tl };",
+        "name": "Test Template",
+        "description": "A test template",
+        "category": "social",
+        "html_template": '<div id="root" data-composition-id="root" data-start="0" data-duration="5" data-width="1920" data-height="1080" data-fps="30"><div class="placeholder" data-animate="opacity: 0 1 0 5">Template</div></div>',
+        "css_template": ".placeholder { width: 100px; height: 100px; background: blue; }",
+        "js_template": "function registerTimelines() { gsap.timeline({paused: true}).to('.placeholder', {opacity: 1, duration: 5}); }",
         "default_width": 1920,
         "default_height": 1080,
         "default_fps": 30,
         "default_duration": 5.0,
-        "parameters_schema": {
-            "type": "object",
-            "properties": {
-                "name": {"type": "string"},
-                "title": {"type": "string"},
-            },
-            "required": ["name", "title"],
-        },
+        "parameters_schema": {"title": {"type": "string", "default": "Default Title"}},
     }

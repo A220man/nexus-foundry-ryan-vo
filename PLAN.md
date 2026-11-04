@@ -39,7 +39,7 @@ Tests: `frontend/src/utils/compositionPreview.test.ts`
 
 ### video-rendering — Video rendering pipeline (headless Chrome + ffmpeg)
 
-Status: planned
+Status: done
 
 Acceptance:
 - Render endpoint accepts composition ID and render config
@@ -47,6 +47,10 @@ Acceptance:
 - ffmpeg encodes frames to MP4/WebM/MOV
 - Render job status polling
 - Download rendered video
+
+Implementation: `backend/app/services/rendering.py`, `backend/app/api/compositions.py`, `backend/app/models/composition.py`
+
+Tests: `backend/tests/test_api_compositions.py::TestRenderJobs`
 
 ### agent-api — Agent-friendly API for programmatic composition
 
