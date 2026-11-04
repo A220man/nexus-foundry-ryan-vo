@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.0 — work-in-progress checkpoint
+
+Partial code published for continued development. Known issues: STATUS.md.
+
 ## 1.3.0 — work-in-progress checkpoint
 
 Partial code published for continued development. Known issues: STATUS.md.
@@ -20,6 +24,43 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.3.0] - 2026-11-04
+
+### Added
+- Video rendering pipeline with headless Chrome (Playwright) and ffmpeg
+- `backend/app/services/rendering.py` — rendering service with frame capture and video encoding
+- Support for MP4 (libx264), WebM (VP9), MOV (ProRes), and PNG sequence output formats
+- Quality presets (low, medium, high, ultra) mapping to CRF values
+- Render job status tracking with progress percentage and frame count
+- Background task execution with proper session isolation for async rendering
+- Test session factory override for reliable background task testing
+- `set_session_factory()` in `backend/app/core/database.py` for test dependency injection
+
+### Fixed
+- Template creation API field mapping (html_template, css_template, js_template, default_width, etc.)
+- Test fixtures updated with required validation attributes (data-start, data-width, data-height)
+- Background render tasks now use test database session in test environment
+
+### Tests
+- All 45 backend tests passing including 5 render job tests and 6 template tests
+- Render job tests verify: create, list, get, invalid format, composition not found
+
+## [1.2.0] - 2024-10-13
+
+### Added
+- Monaco editor with syntax highlighting for HTML, CSS, and JavaScript in composition editor
+- Live iframe preview showing real-time rendering of composition with GSAP from CDN
+- `frontend/src/utils/compositionPreview.ts` — preview document builder utility
+- `pyproject.toml` at project root for Python project metadata
+- `compose.yaml` (Docker Compose) replacing `docker-compose.yml`
+
+### Changed
+- `frontend/src/components/CompositionForm.tsx` — replaced textarea inputs with Monaco `<Editor>` components in a split-view layout with live preview pane
+- Expanded test suite to 45 backend tests and 25 frontend tests
+
+### Tests
+- `frontend/src/utils/compositionPreview.test.ts` — 7 tests covering preview document generation
 
 ## [1.0.0] - 2024-10-13
 
@@ -47,20 +88,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Database: SQLite with async support (aiosqlite)
 - Validation: Required attributes (data-composition-id, data-start, data-duration, data-width, data-height, data-fps), GSAP timeline checks, video element attributes
 - Rendering: Designed for headless Chrome CDP + ffmpeg (implementation in next phase)
-
-
-## [Unreleased]
-
-### Added
-- Monaco editor with syntax highlighting for HTML, CSS, and JavaScript in composition editor
-- Live iframe preview showing real-time rendering of composition with GSAP from CDN
-- `frontend/src/utils/compositionPreview.ts` — preview document builder utility
-- `pyproject.toml` at project root for Python project metadata
-- `compose.yaml` (Docker Compose) replacing `docker-compose.yml`
-
-### Changed
-- `frontend/src/components/CompositionForm.tsx` — replaced textarea inputs with Monaco `<Editor>` components in a split-view layout with live preview pane
-- Expanded test suite to 45 backend tests and 25 frontend tests
-
-### Tests
-- `frontend/src/utils/compositionPreview.test.ts` — 7 tests covering preview document generation
