@@ -232,6 +232,34 @@ class TestRenderJobs:
         data = response.json()
         assert data["id"] == render_id
 
+    async def test_download_render_not_found(self, client: AsyncClient):
+        """Test downloading non-existent render job returns 404."""
+        response = await client.get("/api/compositions/renders/non-existent/download")
+        assert response.status_code == 404
+
+    async def test_download_render_completed(self, client: AsyncClient, sample_composition_data: dict):
+        """Test downloading completed render job returns file."""
+        create_resp = await client.post("/api/compositions", json=sample_composition_data)
+        comp_id = create_resp.json()["id"]
+
+        render_resp = await client.post(f"/api/compositions/{comp_id}/render", json={"format": "mp4"})
+        render_id = render_resp.json()["id"]
+
+        # Wait for background task to complete (it runs fast with placeholder frames)
+        import asyncio
+        await asyncio.sleep(0.5)
+
+        # Check status - should be completed
+        status_resp = await client.get(f"/api/compositions/renders/{render_id}")
+        assert status_resp.json()["status"] == "completed"
+
+        # Download should work for completed job
+        response = await client.get(f"/api/compositions/renders/{render_id}/download")
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "video/mp4"
+
+
+
 
 class TestTemplates:
     """Tests for composition template endpoints."""
