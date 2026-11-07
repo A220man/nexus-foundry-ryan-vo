@@ -413,6 +413,39 @@ async def create_render_job(
 async def _utc_now():
     from datetime import datetime, timezone
     return datetime.now(timezone.utc)
+@router.get("/renders/{render_id}/download")
+async def download_render(render_id: str, session: SessionDep):
+    """Download a rendered video file."""
+    from fastapi.responses import FileResponse
+    import os
+
+    result = await session.execute(
+        select(RenderJob).where(RenderJob.id == render_id)
+    )
+    render_job = result.scalar_one_or_none()
+    if not render_job:
+        raise HTTPException(status_code=404, detail="Render job not found")
+
+    if render_job.status != "completed":
+        raise HTTPException(status_code=400, detail=f"Render job not completed (status: {render_job.status})")
+
+    if not render_job.output_path or not os.path.exists(render_job.output_path):
+        raise HTTPException(status_code=404, detail="Rendered file not found")
+
+    # Determine media type based on format
+    media_type_map = {
+        "mp4": "video/mp4",
+        "webm": "video/webm",
+        "mov": "video/quicktime",
+    }
+    media_type = media_type_map.get(render_job.format, "application/octet-stream")
+
+    filename = os.path.basename(render_job.output_path)
+    return FileResponse(
+        path=render_job.output_path,
+        media_type=media_type,
+        filename=filename,
+    )
 
 
 @router.get("/{composition_id}/renders", response_model=list[RenderJobResponse])

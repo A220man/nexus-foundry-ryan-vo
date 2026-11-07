@@ -1,31 +1,25 @@
 # Changelog
 
+## 1.5.0 — work-in-progress checkpoint
+
+Partial code published for continued development. Known issues: STATUS.md.
+
 ## 1.4.0 — work-in-progress checkpoint
 
 Partial code published for continued development. Known issues: STATUS.md.
 
+### Added
+- Download endpoint for rendered videos (`GET /api/compositions/renders/{render_id}/download`)
+- Tests for download endpoint (not found, completed download)
+
+### Tests
+- All 47 backend tests passing (including 7 render job tests)
+- All 25 frontend tests passing
+- Frontend builds successfully
+
 ## 1.3.0 — work-in-progress checkpoint
 
 Partial code published for continued development. Known issues: STATUS.md.
-
-## 1.2.0 — work-in-progress checkpoint
-
-Partial code published for continued development. Known issues: STATUS.md.
-
-## 1.1.0 — work-in-progress checkpoint
-
-Partial code published for continued development. Known issues: STATUS.md.
-
-## 1.0.0 — work-in-progress checkpoint
-
-Partial code published for continued development. Known issues: STATUS.md.
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [1.3.0] - 2026-11-04
 
 ### Added
 - Video rendering pipeline with headless Chrome (Playwright) and ffmpeg
@@ -46,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All 45 backend tests passing including 5 render job tests and 6 template tests
 - Render job tests verify: create, list, get, invalid format, composition not found
 
-## [1.2.0] - 2024-10-13
+## 1.2.0 — 2024-10-13
 
 ### Added
 - Monaco editor with syntax highlighting for HTML, CSS, and JavaScript in composition editor
@@ -62,7 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Tests
 - `frontend/src/utils/compositionPreview.test.ts` — 7 tests covering preview document generation
 
-## [1.0.0] - 2024-10-13
+## 1.0.0 — 2024-10-13
 
 ### Added
 - FastAPI backend with SQLite persistence using SQLAlchemy 2.0
@@ -88,3 +82,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Database: SQLite with async support (aiosqlite)
 - Validation: Required attributes (data-composition-id, data-start, data-duration, data-width, data-height, data-fps), GSAP timeline checks, video element attributes
 - Rendering: Designed for headless Chrome CDP + ffmpeg (implementation in next phase)
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
