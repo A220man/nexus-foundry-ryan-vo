@@ -69,7 +69,7 @@ class RenderJob(Base):
     )
     status: Mapped[str] = mapped_column(
         String(32), default="pending", nullable=False
-    )  # pending, running, completed, failed
+    )  # pending, running, completed, failed, cancelled
     format: Mapped[str] = mapped_column(String(16), default="mp4")
     quality: Mapped[str] = mapped_column(String(16), default="high")
     output_path: Mapped[str | None] = mapped_column(Text, nullable=True)

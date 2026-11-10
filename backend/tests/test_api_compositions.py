@@ -258,6 +258,49 @@ class TestRenderJobs:
         assert response.status_code == 200
         assert response.headers["content-type"] == "video/mp4"
 
+    async def test_cancel_render_job_pending(self, client: AsyncClient, sample_composition_data: dict):
+        """Test cancelling a pending render job."""
+        create_resp = await client.post("/api/compositions", json=sample_composition_data)
+        comp_id = create_resp.json()["id"]
+
+        render_resp = await client.post(f"/api/compositions/{comp_id}/render", json={"format": "mp4"})
+        render_id = render_resp.json()["id"]
+
+        # Cancel the render job (may be pending or running by now)
+        response = await client.post(f"/api/compositions/renders/{render_id}/cancel")
+        # Accept 200 (cancelled) or 400 (already completed/failed)
+        if response.status_code == 200:
+            data = response.json()
+            assert data["status"] == "cancelled"
+            assert data["error_message"] == "Cancelled by user"
+        else:
+            # Job completed too fast to cancel - verify it's completed
+            assert response.status_code == 400
+            status_resp = await client.get(f"/api/compositions/renders/{render_id}")
+            assert status_resp.json()["status"] in ("completed", "failed")
+
+    async def test_cancel_render_job_not_found(self, client: AsyncClient):
+        """Test cancelling non-existent render job returns 404."""
+        response = await client.post("/api/compositions/renders/non-existent/cancel")
+        assert response.status_code == 404
+
+    async def test_cancel_render_job_already_completed(self, client: AsyncClient, sample_composition_data: dict):
+        """Test cancelling a completed render job returns 400."""
+        create_resp = await client.post("/api/compositions", json=sample_composition_data)
+        comp_id = create_resp.json()["id"]
+
+        render_resp = await client.post(f"/api/compositions/{comp_id}/render", json={"format": "mp4"})
+        render_id = render_resp.json()["id"]
+
+        # Wait for background task to complete
+        import asyncio
+        await asyncio.sleep(1.0)
+
+        # Try to cancel - should fail
+        response = await client.post(f"/api/compositions/renders/{render_id}/cancel")
+        assert response.status_code == 400
+        assert "Cannot cancel render job with status: completed" in response.json()["detail"]
+
 
 
 

@@ -29,6 +29,9 @@ async def render_composition(session, render_job, composition, output_dir):
         render_job.total_frames = total_frames
         render_job.completed_frames = total_frames
         render_job.progress = 100
+        await session.refresh(render_job)
+        if render_job.status == "cancelled":
+            raise RenderingError("Render job was cancelled")
         await session.flush()
 
         output_file = await _encode_video(frames_dir, output_dir, composition, render_job)
@@ -120,6 +123,10 @@ async def _capture_frames_playwright(html_file, frames_dir, composition, render_
         await page.wait_for_function("typeof window.__timelines !== 'undefined'")
 
         for i in range(total_frames):
+            # Check for cancellation before each frame
+            await session.refresh(render_job)
+            if render_job.status == "cancelled":
+                raise RenderingError("Render job was cancelled")
             progress = i / max(total_frames - 1, 1)
             time = progress * composition.duration
 
@@ -161,6 +168,10 @@ async def _capture_frames_pyppeteer(html_file, frames_dir, composition, render_j
     await page.waitForFunction("typeof window.__timelines !== 'undefined'")
 
     for i in range(total_frames):
+        # Check for cancellation before each frame
+        await session.refresh(render_job)
+        if render_job.status == "cancelled":
+            raise RenderingError("Render job was cancelled")
         progress = i / max(total_frames - 1, 1)
         time = progress * composition.duration
 
@@ -187,6 +198,10 @@ async def _capture_frames_pyppeteer(html_file, frames_dir, composition, render_j
 
 async def _create_placeholder_frames(frames_dir, total_frames, composition, render_job, session):
     for i in range(total_frames):
+        # Check for cancellation before each frame
+        await session.refresh(render_job)
+        if render_job.status == "cancelled":
+            raise RenderingError("Render job was cancelled")
         progress = i / max(total_frames - 1, 1)
         r = int(50 + progress * 100)
         g = int(100 + progress * 50)

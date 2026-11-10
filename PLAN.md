@@ -47,6 +47,7 @@ Acceptance:
 - ffmpeg encodes frames to MP4/WebM/MOV
 - Render job status polling
 - Download rendered video
+- Cancel render job endpoint
 
 Implementation: `backend/app/services/rendering.py`, `backend/app/api/compositions.py`, `backend/app/models/composition.py`
 
