@@ -475,3 +475,30 @@ async def get_render_job(
     if not render_job:
         raise HTTPException(status_code=404, detail="Render job not found")
     return render_job
+
+@router.post("/renders/{render_id}/cancel", response_model=RenderJobResponse)
+async def cancel_render_job(
+    render_id: str,
+    session: SessionDep,
+) -> RenderJob:
+    """Cancel a running or pending render job."""
+    result = await session.execute(
+        select(RenderJob).where(RenderJob.id == render_id)
+    )
+    render_job = result.scalar_one_or_none()
+    if not render_job:
+        raise HTTPException(status_code=404, detail="Render job not found")
+
+    if render_job.status in ("completed", "failed", "cancelled"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot cancel render job with status: {render_job.status}",
+        )
+
+    render_job.status = "cancelled"
+    render_job.completed_at = await _utc_now()
+    if render_job.error_message is None:
+        render_job.error_message = "Cancelled by user"
+    await session.commit()
+    await session.refresh(render_job)
+    return render_job

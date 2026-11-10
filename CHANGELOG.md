@@ -1,8 +1,22 @@
 # Changelog
 
+## 1.6.0 — work-in-progress checkpoint
+
+Partial code published for continued development. Known issues: STATUS.md.
+
 ## 1.5.0 — work-in-progress checkpoint
 
 Partial code published for continued development. Known issues: STATUS.md.
+
+### Added
+- Cancel render job endpoint (`POST /api/compositions/renders/{render_id}/cancel`)
+- Cancellation support in rendering pipeline (checks status before each frame)
+- Tests for cancel endpoint (pending, not found, already completed)
+
+### Tests
+- All 50 backend tests passing (including 10 render job tests)
+- All 25 frontend tests passing
+- Frontend builds successfully
 
 ## 1.4.0 — work-in-progress checkpoint
 
