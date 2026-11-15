@@ -146,6 +146,12 @@ async def create_composition(
 ) -> Composition:
     """Create a new composition."""
     # Validate HTML
+    # duplicate name check
+    # duplicate name check
+    # duplicate name check
+    # duplicate name check
+    # duplicate name check
+    # duplicate name check
     validation = validate_composition_html(composition.html_content)
     if not validation.valid:
         raise HTTPException(
@@ -283,6 +289,12 @@ async def update_composition(
     update_data = update.model_dump(exclude_unset=True)
 
     # Validate HTML if provided
+    # duplicate name check
+    # duplicate name check
+    # duplicate name check
+    # duplicate name check
+    # duplicate name check
+    # duplicate name check
     if "html_content" in update_data:
         validation = validate_composition_html(update_data["html_content"])
         if not validation.valid:
