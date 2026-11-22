@@ -1,4 +1,6 @@
 """Composition API routes."""
+import json
+import re
 from datetime import datetime, timezone
 from typing import Annotated
 from uuid import uuid4
@@ -122,6 +124,15 @@ class TemplateResponse(TemplateBase):
 
     class Config:
         from_attributes = True
+
+
+class TemplateCompositionCreate(BaseModel):
+    """JSON body for instantiating a composition from a template."""
+
+    name: str = Field(..., min_length=1, max_length=255)
+    parameters: dict = Field(default_factory=dict)
+    description: str | None = None
+    meta: dict = Field(default_factory=dict)
 
 
 # Dependency for DB session
@@ -254,6 +265,84 @@ async def get_template(
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
     return template
+
+
+@router.post(
+    "/templates/{template_id}/instantiate",
+    response_model=CompositionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_composition_from_template(
+    template_id: str,
+    instantiation: TemplateCompositionCreate,
+    session: SessionDep,
+) -> Composition:
+    """Create a composition by substituting JSON parameters into a template."""
+    result = await session.execute(
+        select(CompositionTemplate).where(CompositionTemplate.id == template_id)
+    )
+    template = result.scalar_one_or_none()
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    html_content = _substitute_template_parameters(template.html_template, instantiation.parameters)
+    css_content = (
+        _substitute_template_parameters(template.css_template, instantiation.parameters)
+        if template.css_template
+        else None
+    )
+    js_content = (
+        _substitute_template_parameters(template.js_template, instantiation.parameters)
+        if template.js_template
+        else None
+    )
+
+    validation = validate_composition_html(html_content)
+    if not validation.valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "errors": validation.errors,
+                "warnings": validation.warnings,
+                "message": "Instantiated composition failed validation",
+            },
+        )
+
+    db_composition = Composition(
+        name=instantiation.name,
+        description=instantiation.description,
+        html_content=html_content,
+        css_content=css_content,
+        js_content=js_content,
+        width=template.default_width,
+        height=template.default_height,
+        fps=template.default_fps,
+        duration=template.default_duration,
+        meta={**instantiation.meta, "template_id": template.id},
+    )
+    session.add(db_composition)
+    await session.flush()
+    await session.refresh(db_composition)
+    return db_composition
+
+
+def _substitute_template_parameters(text: str, parameters: dict) -> str:
+    """Replace ``{{key}}`` placeholders in a template string with parameter values.
+
+    Unknown placeholders are left untouched so missing optional parameters do not
+    silently produce empty output.
+    """
+
+    def replace(match: "re.Match[str]") -> str:
+        key = match.group(1).strip()
+        if key in parameters:
+            value = parameters[key]
+            if isinstance(value, (dict, list)):
+                return json.dumps(value, ensure_ascii=False)
+            return str(value)
+        return match.group(0)
+
+    return re.sub(r"\{\{\s*([^{}]+?)\s*\}\}", replace, text)
 
 
 # Composition detail routes (after templates to avoid path conflicts)
