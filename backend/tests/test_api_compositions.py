@@ -357,3 +357,52 @@ class TestTemplates:
         """Test getting non-existent template returns 404."""
         response = await client.get("/api/compositions/templates/non-existent")
         assert response.status_code == 404
+
+
+
+
+
+
+class TestAgentAPI:
+    """Tests for agent-friendly composition creation API."""
+
+    async def test_create_composition_via_agent_endpoint(self, client: AsyncClient, sample_composition_data: dict):
+        """Test creating a composition via the agent-friendly JSON endpoint."""
+        agent_data = {
+            "name": "Agent Test Composition",
+            "html_content": "<div data-composition-id='agent-test' data-start='0' data-duration='10' data-width='1920' data-height='1080' data-fps='30'></div>",
+        }
+        response = await client.post("/api/compositions/agent", json=agent_data)
+        assert response.status_code == 201
+        data = response.json()
+        assert data["name"] == "Agent Test Composition"
+        assert data["html_content"] == "<div data-composition-id='agent-test' data-start='0' data-duration='10' data-width='1920' data-height='1080' data-fps='30'></div>"
+        assert "id" in data
+        assert "created_at" in data
+
+    async def test_create_composition_via_agent_endpoint_duplicate_name(self, client: AsyncClient, sample_composition_data: dict):
+        """Test creating a composition with duplicate name via agent endpoint fails."""
+        # First creation
+        agent_data = {
+            "name": "Duplicate Name",
+            "html_content": "<div data-composition-id='first' data-start='0' data-duration='10' data-width='1920' data-height='1080' data-fps='30'></div>",
+        }
+        response = await client.post("/api/compositions/agent", json=agent_data)
+        assert response.status_code == 201
+        # Second creation with same name should fail
+        response = await client.post("/api/compositions/agent", json=agent_data)
+        assert response.status_code == 409  # Conflict
+        error = response.json()
+        assert "already exists" in error["detail"]
+
+    async def test_create_composition_via_agent_endpoint_invalid_html(self, client: AsyncClient):
+        """Test creating composition with invalid HTML via agent endpoint fails."""
+        agent_data = {
+            "name": "Invalid HTML",
+            "html_content": "<div>No required attributes</div>",
+        }
+        response = await client.post("/api/compositions/agent", json=agent_data)
+        assert response.status_code == 400
+        error = response.json()
+        assert "errors" in error["detail"]
+        assert any("data-composition-id" in e for e in error["detail"]["errors"])

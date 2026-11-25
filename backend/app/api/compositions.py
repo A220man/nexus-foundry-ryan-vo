@@ -214,7 +214,38 @@ async def list_compositions(
 
 
 # Templates (must come before /{composition_id} routes)
-@router.post(
+
+
+# Agent-friendly composition creation (simplified JSON API)
+    # Validate HTML
+    validation = validate_composition_html(composition.html_content)
+    if not validation.valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"errors": validation.errors, "warnings": validation.warnings},
+        )
+
+    # Check for duplicate name
+    result = await session.execute(
+        select(Composition).where(Composition.name == composition.name)
+    )
+    if result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Composition with name '{composition.name}' already exists",
+        )
+
+    db_composition = Composition(
+        name=composition.name,
+        html_content=composition.html_content,
+        css_content=composition.metadata.get("css_content"),
+        js_content=composition.metadata.get("js_content"),
+        meta=composition.metadata,
+    )
+    session.add(db_composition)
+    await session.flush()
+    await session.refresh(db_composition)
+    return db_composition@router.post(
     "/templates",
     response_model=TemplateResponse,
     status_code=status.HTTP_201_CREATED,
@@ -603,3 +634,57 @@ async def cancel_render_job(
     await session.commit()
     await session.refresh(render_job)
     return render_job
+
+# Agent-friendly composition creation (simplified JSON API)
+class AgentCompositionCreate(BaseModel):
+    """Minimal composition creation model for agent/API use."""
+    name: str = Field(..., min_length=1, max_length=255)
+    html_content: str = Field(..., min_length=1)
+    metadata: dict = Field(default_factory=dict)
+
+
+@router.post(
+    "/agent",
+    response_model=CompositionResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["agent"],
+    summary="Create a composition from JSON (agent-friendly)",
+)
+async def create_agent_composition(
+    composition: AgentCompositionCreate,
+    session: SessionDep,
+) -> Composition:
+    """Create a new composition from minimal JSON payload (agent-friendly API).
+
+    This endpoint provides a simplified interface for programmatic composition creation,
+    suitable for agent-driven workflows and external system integration.
+    """
+    # Validate HTML
+    validation = validate_composition_html(composition.html_content)
+    if not validation.valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"errors": validation.errors, "warnings": validation.warnings},
+        )
+
+    # Check for duplicate name
+    result = await session.execute(
+        select(Composition).where(Composition.name == composition.name)
+    )
+    if result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Composition with name '{composition.name}' already exists",
+        )
+
+    db_composition = Composition(
+        name=composition.name,
+        html_content=composition.html_content,
+        css_content=composition.metadata.get("css_content"),
+        js_content=composition.metadata.get("js_content"),
+        meta=composition.metadata,
+    )
+    session.add(db_composition)
+    await session.flush()
+    await session.refresh(db_composition)
+    return db_composition
