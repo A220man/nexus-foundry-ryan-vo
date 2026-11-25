@@ -1,6 +1,17 @@
 # Changelog
 
+## 1.9.0 — work-in-progress checkpoint
+
+Partial code published for continued development. Known issues: STATUS.md.
+
 ## 1.8.0 — work-in-progress checkpoint
+
+### Added
+- Agent-friendly API endpoint for programmatic composition creation
+  - `POST /api/compositions/agent` - creates compositions from minimal JSON payload
+  - `AgentCompositionCreate` model with `name`, `html_content`, `metadata` fields
+  - Suitable for agent-driven workflows and external system integration
+- Test coverage for agent API endpoint with 3 passing tests:
 
 Partial code published for continued development. Known issues: STATUS.md.
 
